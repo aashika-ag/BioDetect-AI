@@ -1,29 +1,23 @@
 import pandas as pd
+import numpy as np
 from sklearn.preprocessing import StandardScaler
-from sklearn.impute import SimpleImputer
-import joblib
-import os
+from sklearn.model_selection import train_test_split
 
-MODEL_DIR = "models"
-
-def preprocess(path):
-    df = pd.read_csv(path)
-
-    # Split features and target
-    X = df.drop("target", axis=1)
-    y = df["target"]
-
-    # Handle missing values
-    imputer = SimpleImputer(strategy="mean")
-    X = imputer.fit_transform(X)
-
-    # Normalize data
+def prepare_data(filepath="data/raw/sample.csv"):
+    df = pd.read_csv(filepath)
+    
+    # Separate ID and Target
+    X = df.drop(columns=['target', 'patient_id'])
+    y = df['target']
+    
+    # Normalize data (StandardScaler)
     scaler = StandardScaler()
-    X = scaler.fit_transform(X)
+    X_scaled = scaler.fit_transform(X)
+    
+    return train_test_split(X_scaled, y, test_size=0.2, random_state=42), scaler, X.columns
 
-    # Save artifacts
-    os.makedirs(MODEL_DIR, exist_ok=True)
-    joblib.dump(imputer, f"{MODEL_DIR}/imputer.pkl")
-    joblib.dump(scaler, f"{MODEL_DIR}/scaler.pkl")
-
-    return X, y
+def get_top_features(model, feature_names, n=5):
+    """Returns the most important biomarkers identified by the AI"""
+    importances = model.feature_importances_
+    indices = np.argsort(importances)[-n:]
+    return [feature_names[i] for i in indices]
